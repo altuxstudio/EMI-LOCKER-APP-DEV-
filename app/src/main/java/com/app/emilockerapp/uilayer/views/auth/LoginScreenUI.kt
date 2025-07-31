@@ -1,12 +1,15 @@
 package com.app.emilockerapp.uilayer.views.auth
 
+import android.widget.Toast
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -18,6 +21,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -26,14 +30,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.emilockerapp.datalayer.viewmodels.AuthViewModel
 import kotlin.math.sin
 
 @Composable
-fun LoginUiScreen() {
+fun LoginUiScreen(viewModel: AuthViewModel = viewModel()) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(false) }
+
+    val state by viewModel.loginState.collectAsState()
 
     // Animated background
     val infiniteTransition = rememberInfiniteTransition(label = "background")
@@ -58,6 +66,15 @@ fun LoginUiScreen() {
         label = "logoScale"
     )
 
+    if (state.success) {
+        // Navigate to Dashboard
+        Toast.makeText(LocalContext.current, "Login Successful", Toast.LENGTH_SHORT).show()
+    }
+
+    state.errorMessage?.let { error ->
+        Toast.makeText(LocalContext.current, error, Toast.LENGTH_SHORT).show()
+    }
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -71,10 +88,12 @@ fun LoginUiScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(10.dp)) // Add top padding for better scroll spacing
+
             // Logo section with animation
             Box(
                 modifier = Modifier
@@ -201,7 +220,9 @@ fun LoginUiScreen() {
             // Login button
             ModernActionButton(
                 buttonText = "Sign In",
-                onClick = { /* Handle login */ },
+                onClick = {
+                    viewModel.login(username, password)
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -264,6 +285,19 @@ fun LoginUiScreen() {
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { /* Handle sign up */ }
+                )
+            }
+        }
+
+        if (state.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color = Color.White
                 )
             }
         }

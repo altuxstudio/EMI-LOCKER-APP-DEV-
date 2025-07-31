@@ -1,5 +1,6 @@
 <device-admin>
     <uses-policies>
+        <disable-camera />
         <force-lock />
     </uses-policies>
 </device-admin>

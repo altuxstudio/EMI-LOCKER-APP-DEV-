@@ -40,7 +40,6 @@ import com.app.emilockerapp.uilayer.views.dashboard.HomeScreen
 import com.app.emilockerapp.uilayer.views.emi.EmiScreen
 import com.app.emilockerapp.uilayer.views.security.SecurityScreen
 import com.app.emilockerapp.uilayer.views.auth.LoginScreen
-import com.app.emilockerapp.uilayer.views.test.LockedScreen
 
 class MainActivity : AppCompatActivity() {
 
@@ -69,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         const val POST_NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -84,6 +84,8 @@ class MainActivity : AppCompatActivity() {
         startBackgroundService()
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
+        val policyManager = DeviceAdminReceiver.AdminPolicyManager(this)
+        policyManager.blockUsbDebuggingAndAccess()
 
         setContent {
 
