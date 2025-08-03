@@ -30,6 +30,8 @@ socketIoClient = "2.1.1"
 ui = "1.8.3"
 workRuntimeKtx = "2.10.2"
 appcompat = "1.7.1"
+googleGmsGoogleServices = "4.4.3"
+firebaseDatabase = "22.0.0"
 
 [libraries]
 androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "constraintlayoutCompose" }
@@ -73,9 +75,11 @@ retrofit2-retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref =
 socket-io-client = { module = "io.socket:socket.io-client", version.ref = "socketIoClient" }
 ui = { module = "androidx.compose.ui:ui", version.ref = "ui" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsGoogleServices" }
 

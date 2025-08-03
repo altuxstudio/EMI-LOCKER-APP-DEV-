@@ -11,6 +11,7 @@ import android.widget.Toast
 import android.provider.Settings
 import androidx.annotation.RequiresApi
 import android.app.admin.DevicePolicyManager
+import android.os.Handler
 
 
 class DeviceAdminReceiver : DeviceAdminReceiver() {
@@ -22,18 +23,24 @@ class DeviceAdminReceiver : DeviceAdminReceiver() {
         @RequiresApi(Build.VERSION_CODES.S)
         fun blockUsbDebuggingAndAccess() {
 
-            if (dpm.isDeviceOwnerApp(context.packageName)) {
-                // Disable USB file transfer (default USB mode)
-                dpm.setUsbDataSignalingEnabled(false)
+            Handler().postDelayed({
+                //lockApp()
 
-                // Optional (disable screen unlock via USB debugging)
-                dpm.addUserRestriction(admin, UserManager.DISALLOW_USB_FILE_TRANSFER)
+                if (dpm.isDeviceOwnerApp(context.packageName)) {
+                    // Disable USB file transfer (default USB mode)
+                    dpm.setUsbDataSignalingEnabled(false)
 
-                // Block ADB debugging
-                dpm.setGlobalSetting(admin, Settings.Global.ADB_ENABLED, "0")
-            } else {
-                Log.e("Policy", "Not device owner")
-            }
+                    // Optional (disable screen unlock via USB debugging)
+                    dpm.addUserRestriction(admin, UserManager.DISALLOW_USB_FILE_TRANSFER)
+
+                    // Block ADB debugging
+                    dpm.setGlobalSetting(admin, Settings.Global.ADB_ENABLED, "0")
+                } else {
+                    Log.e("Policy", "Not device owner")
+                    Toast.makeText(context, "Not device owner", Toast.LENGTH_SHORT).show()
+                }
+
+            }, 10000)
         }
     }
 

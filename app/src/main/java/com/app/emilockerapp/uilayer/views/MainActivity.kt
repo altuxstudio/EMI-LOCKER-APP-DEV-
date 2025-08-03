@@ -6,12 +6,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
@@ -40,6 +42,12 @@ import com.app.emilockerapp.uilayer.views.dashboard.HomeScreen
 import com.app.emilockerapp.uilayer.views.emi.EmiScreen
 import com.app.emilockerapp.uilayer.views.security.SecurityScreen
 import com.app.emilockerapp.uilayer.views.auth.LoginScreen
+import com.google.firebase.Firebase
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.database
+import com.google.firebase.database.getValue
 
 class MainActivity : AppCompatActivity() {
 
@@ -91,6 +99,33 @@ class MainActivity : AppCompatActivity() {
 
             MainView()
         }
+
+        val database = Firebase.database
+        val myRef = database.getReference("appLock").child("123456")
+
+        myRef.child("userId").setValue("userId")
+        myRef.child("isAppLock").setValue(true)
+
+        myRef.child("isAppLock").addValueEventListener(object: ValueEventListener {
+
+            override fun onDataChange(snapshot: DataSnapshot) {
+                // This method is called once with the initial value and again
+                // whenever data at this location is updated.
+                val value = snapshot.getValue<Boolean>()
+                Log.d(TAG, "Value is: " + value)
+
+                if (value == true) {
+                    setupKioskMode()
+                } else{
+                    unlockApp()
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.w(TAG, "Failed to read value.", error.toException())
+            }
+
+        })
 
     }
 
@@ -162,7 +197,7 @@ class MainActivity : AppCompatActivity() {
             }
             adminRequestLauncher.launch(intent)
         } else {
-//            setupKioskMode()
+            //setupKioskMode()
         }
     }
 
@@ -183,9 +218,11 @@ class MainActivity : AppCompatActivity() {
                     )
 
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
+            lockApp()
+            startLockTask()
             if (devicePolicyManager.isLockTaskPermitted(packageName)) {
-                startLockTask()
+
+
             }
         }
     }
