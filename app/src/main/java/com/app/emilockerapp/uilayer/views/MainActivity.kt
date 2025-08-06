@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.UserManager
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
@@ -61,7 +62,7 @@ class MainActivity : AppCompatActivity() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             Toast.makeText(this, "Device admin enabled", Toast.LENGTH_SHORT).show()
-//            setupKioskMode()
+            //setupKioskMode()
         } else {
             Toast.makeText(this, "Device admin not enabled", Toast.LENGTH_SHORT).show()
         }
@@ -88,6 +89,7 @@ class MainActivity : AppCompatActivity() {
 
         enableEdgeToEdge()
         setupDeviceAdmin()
+        //disableDeviceAdmin()
         checkAndRequestPermissions()
         startBackgroundService()
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -103,9 +105,6 @@ class MainActivity : AppCompatActivity() {
         val database = Firebase.database
         val myRef = database.getReference("appLock").child("123456")
 
-        myRef.child("userId").setValue("userId")
-        myRef.child("isAppLock").setValue(true)
-
         myRef.child("isAppLock").addValueEventListener(object: ValueEventListener {
 
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -115,9 +114,11 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Value is: " + value)
 
                 if (value == true) {
-                    setupKioskMode()
+                    //setupKioskMode()
+                    blockDeviceRestrictions()
                 } else{
                     unlockApp()
+                    unblockDeviceRestrictions()
                 }
             }
 
@@ -239,6 +240,51 @@ class MainActivity : AppCompatActivity() {
             stopLockTask()
         }
         Toast.makeText(this, "App unlocked", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun blockDeviceRestrictions() {
+        if (devicePolicyManager.isAdminActive(adminComponent)) {
+            try {
+                devicePolicyManager.addUserRestriction(adminComponent, UserManager.DISALLOW_FACTORY_RESET)
+
+                devicePolicyManager.addUserRestriction(adminComponent, UserManager.DISALLOW_SAFE_BOOT)
+                devicePolicyManager.addUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
+
+
+                Toast.makeText(this, "Factory reset is now blocked", Toast.LENGTH_SHORT).show()
+            } catch (e: SecurityException) {
+                Log.e(TAG, "Failed to block factory reset: ${e.message}")
+                Toast.makeText(this, "Blocking factory reset failed", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "Device admin not active", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun unblockDeviceRestrictions() {
+        if (devicePolicyManager.isAdminActive(adminComponent)) {
+            try {
+                devicePolicyManager.clearUserRestriction(
+                    adminComponent,
+                    UserManager.DISALLOW_FACTORY_RESET
+                )
+                devicePolicyManager.clearUserRestriction(
+                    adminComponent,
+                    UserManager.DISALLOW_SAFE_BOOT
+                )
+                devicePolicyManager.clearUserRestriction(
+                    adminComponent,
+                    UserManager.DISALLOW_USB_FILE_TRANSFER
+                )
+
+                Toast.makeText(this, "Device restrictions removed", Toast.LENGTH_SHORT).show()
+            } catch (e: SecurityException) {
+                Log.e(TAG, "Failed to unblock restrictions: ${e.message}")
+                Toast.makeText(this, "Failed to remove restrictions", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "Device admin not active", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun makeEmergencyCall() {

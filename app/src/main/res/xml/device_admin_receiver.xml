@@ -2,5 +2,10 @@
     <uses-policies>
         <disable-camera />
         <force-lock />
+
+        <limit-password />
+        <watch-login />
+        <reset-password />
+        <wipe-data />
     </uses-policies>
 </device-admin>
