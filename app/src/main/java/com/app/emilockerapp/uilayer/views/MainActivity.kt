@@ -94,9 +94,6 @@ class MainActivity : AppCompatActivity() {
         startBackgroundService()
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
-        val policyManager = DeviceAdminReceiver.AdminPolicyManager(this)
-        policyManager.blockUsbDebuggingAndAccess()
-
         setContent {
 
             MainView()
@@ -114,7 +111,7 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Value is: " + value)
 
                 if (value == true) {
-                    //setupKioskMode()
+                    setupKioskMode()
                     blockDeviceRestrictions()
                 } else{
                     unlockApp()
@@ -325,6 +322,62 @@ class MainActivity : AppCompatActivity() {
                 appCoordinator.CatoPayNavHost()
             }
         }
+
+        /*EmiLockerAppTheme(darkTheme = false) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize()
+            ) { innerPadding ->
+                bottomPadding = innerPadding.calculateBottomPadding()
+                val mainModifier = Modifier.padding(innerPadding)
+
+                val mNavHostController = androidx.navigation.compose.rememberNavController()
+
+                // Example Button to call blockDeviceRestrictions()
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    androidx.compose.material3.Button(
+                        onClick = {
+                            val isDeviceOwner = devicePolicyManager.isDeviceOwnerApp(packageName)
+                            if (!isDeviceOwner) {
+                                Toast.makeText(this@MainActivity, "Not device owner", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            } else {
+                                devicePolicyManager.clearDeviceOwnerApp(componentName.packageName)
+                                Toast.makeText(this@MainActivity, "Device owner clear", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            //blockDeviceRestrictions()
+                            Toast.makeText(this@MainActivity, "Clicked", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        androidx.compose.material3.Text("Block Device Restrictions")
+                    }
+
+                    androidx.compose.material3.Button(
+                        onClick = {
+                            Toast.makeText(this@MainActivity, "Clearing permission", Toast.LENGTH_SHORT).show()
+                            //devicePolicyManager.clearDeviceOwnerApp(componentName.packageName)
+                            //devicePolicyManager.reboot(adminComponent)
+                            blockDeviceRestrictions()
+                        }
+                    ) {
+                        androidx.compose.material3.Text("Clear permission")
+                    }
+                }
+
+                _appCoordinator = EmiLockerNavCoordinator(
+                    mNavHostController,
+                    mainModifier,
+                    createListOfScreensInsideComposable(mNavHostController),
+                    SecurityScreen.Routes.emiSecurityScreen,
+                    this
+                )
+                appCoordinator.CatoPayNavHost()
+            }
+        }*/
     }
 
     private fun createListOfScreensInsideComposable(
