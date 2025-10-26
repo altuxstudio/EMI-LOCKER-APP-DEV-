@@ -1,13 +1,13 @@
-package com.app.emilockerapp.uilayer.views.test
+package com.app.emilockerapp.uilayer.views.welcome
+
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,8 +18,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -27,8 +25,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.sin
 
 @Composable
-fun test() {
-    var secretCode by remember { mutableStateOf("") }
+fun WelcomeScreen() {
 
     // Animated background
     val infiniteTransition = rememberInfiniteTransition(label = "background")
@@ -42,7 +39,7 @@ fun test() {
         label = "offset"
     )
 
-    // Pulse animation for lock icon
+    // Pulse animation for icon
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.1f,
@@ -56,7 +53,7 @@ fun test() {
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Animated gradient background
+        // Background
         AnimatedGradientBackground(animatedOffset)
 
         // Floating orbs
@@ -70,26 +67,27 @@ fun test() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Lock icon with glow effect
+
+            // Star Icon with glow
             Box(
                 modifier = Modifier
                     .size(120.dp)
                     .scale(pulseScale),
                 contentAlignment = Alignment.Center
             ) {
-                // Glow effect
+                // Glow
                 Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Lock",
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Star",
                     modifier = Modifier
                         .size(80.dp)
                         .blur(20.dp),
                     tint = Color.White.copy(alpha = 0.3f)
                 )
-                // Main icon
+                // Main
                 Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Lock",
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Star",
                     modifier = Modifier.size(64.dp),
                     tint = Color.White
                 )
@@ -97,7 +95,7 @@ fun test() {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Device locked text with glass effect
+            // Welcome Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -112,8 +110,8 @@ fun test() {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Your device is locked",
-                        fontSize = 28.sp,
+                        text = "Welcome!",
+                        fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         textAlign = TextAlign.Center,
@@ -121,7 +119,7 @@ fun test() {
                     )
 
                     Text(
-                        text = "You need to Pay EMI",
+                        text = "Your journey starts here.\nEnjoy a smooth experience with Emilocker.",
                         fontSize = 16.sp,
                         color = Color.White.copy(alpha = 0.8f),
                         textAlign = TextAlign.Center,
@@ -131,88 +129,10 @@ fun test() {
             }
 
             Spacer(modifier = Modifier.height(48.dp))
-
-            // Modern glass input field
-            /*Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White.copy(alpha = 0.15f)
-                ),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                OutlinedTextField(    // use textfield instead of outlined text field. It is efficient in terms of recomposition
-                    value = secretCode,
-                    onValueChange = { secretCode = it },
-                    label = {
-                        Text(
-                            "Secret Code",
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = if (secretCode.isEmpty()) Icons.Default.Lock else Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.7f)
-                        )
-                    },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color.White.copy(alpha = 0.5f),
-                        unfocusedBorderColor = Color.Transparent,
-                        cursorColor = Color.White
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Gradient submit button
-            Button(
-                onClick = { *//* Handle submit *//* },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(28.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFF667eea),
-                                    Color(0xFF764ba2)
-                                )
-                            ),
-                            shape = RoundedCornerShape(28.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Unlock Device",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                }
-            }*/
         }
     }
 }
+
 
 @Composable
 private fun AnimatedGradientBackground(animatedOffset: Float) {
@@ -262,6 +182,6 @@ private fun FloatingOrbs(animatedOffset: Float) {
 
 @Preview
 @Composable
-fun PreviewTest() {
-    test()
+fun PreviewWelcomeScreen() {
+    WelcomeScreen()
 }

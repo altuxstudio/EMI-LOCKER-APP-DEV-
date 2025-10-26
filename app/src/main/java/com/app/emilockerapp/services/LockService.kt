@@ -1,110 +1,142 @@
 package com.app.emilockerapp.services
 
 import android.app.*
-import android.content.*
+import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import android.app.admin.DevicePolicyManager
 import com.app.emilockerapp.R
-import kotlinx.coroutines.*
+import com.app.emilockerapp.uilayer.views.MainActivity
+import com.app.emilockerapp.utils.getDeviceImei
+import com.app.emilockerapp.utils.getMyRef
+import com.google.firebase.database.*
 
+/**
+ * Foreground service that:
+ * 1. Listens to Firebase Realtime DB for lock/unlock changes.
+ * 2. Brings MainActivity to front when lock is triggered.
+ * 3. Persists across app removal and device reboot.
+ */
 class LockService : Service() {
 
     private val channelId = "lock_channel"
     private val notificationId = 101
-    private val deviceId = "YOUR_DEVICE_ID" // Set or generate your device identifier
-    private val componentName by lazy {
-        ComponentName(this, DeviceAdminReceiver::class.java)
-    }
-
-    private val dpm by lazy {
-        getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-    }
-
-    private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
+    private var firebaseListener: ValueEventListener? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startForeground(notificationId, buildNotification(getString(R.string.emi_app_running)))
-//        startLockStatusMonitor()
+        startFirebaseListener()
     }
 
+
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Ensures the service restarts if killed by the system
         return START_STICKY
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        serviceScope.cancel()
-    }
-
-
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun buildNotification(contentText: String): Notification {
+    /**
+     * Start listening to Firebase for real-time lock updates
+     */
+    private fun startFirebaseListener() {
+        firebaseListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val value = snapshot.getValue(Boolean::class.java) ?: false
+                if (value) {
+                    bringAppToFront()   // Open MainActivity
+                    //enableKioskMode()
+
+                } else {
+                    //bringAppToFront()
+                    //disableKioskMode()
+                }
+
+                //Toast.makeText(this@LockService, "service: $value", Toast.LENGTH_SHORT).show()
+
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                // Handle DB error if needed
+            }
+        }
+        getMyRef(this).addValueEventListener(firebaseListener!!)
+    }
+
+    /**
+     * Bring MainActivity to front, even if the app was removed from Recents
+     */
+    private fun bringAppToFront() {
+        val launchIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+            )
+        }
+        startActivity(launchIntent)
+    }
+
+    /**
+     * Apply your lock actions here (e.g., DevicePolicyManager restrictions, kiosk mode)
+     */
+    private fun applyLock() {
+        // TODO: Implement actual lock logic
+    }
+
+    /**
+     * Remove restrictions when unlocked
+     */
+    private fun releaseLock() {
+        // TODO: Implement unlock logic
+    }
+
+    private fun enableKioskMode() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra("ENABLE_KIOSK", true)
+        }
+        startActivity(intent)
+    }
+
+    private fun disableKioskMode() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra("DISABLE_KIOSK", true)
+        }
+        startActivity(intent)
+    }
+
+    /**
+     * Foreground notification to keep service alive
+     */
+    private fun buildNotification(text: String): Notification {
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle(getString(R.string.emi_lock_text))
-            .setContentText(contentText)
+            .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .build()
     }
 
+    /**
+     * Create a notification channel for Android O+
+     */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
                 "Device Lock Service",
                 NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Monitors and controls device lock status"
-            }
-
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager.createNotificationChannel(channel)
+            )
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
         }
-    }
-
-    /*private fun startLockStatusMonitor() {
-        serviceScope.launch {
-            val api = createApi()
-            while (isActive) {
-                try {
-                    val response = api.getDeviceLockStatus(deviceId)
-                    if (response.locked) {
-                        lockDevice()
-                    } else {
-                        unlockDevice()
-                    }
-                } catch (e: Exception) {
-                    Log.e("MainService", "Error checking lock status", e)
-                }
-                delay(10_000) // Poll every 10 seconds
-            }
-        }
-    }
-
-    private fun lockDevice() {
-        if (dpm.isDeviceOwnerApp(packageName)) {
-            dpm.setLockTaskPackages(componentName, arrayOf(packageName))
-            if (!isInLockTaskMode()) {
-                startLockTask()
-            }
-        }
-    }
-
-    private fun unlockDevice() {
-        if (isInLockTaskMode()) {
-            stopLockTask()
-        }
-    }
-     */
-
-    private fun isInLockTaskMode(): Boolean {
-        return (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager)
-            .lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
     }
 }

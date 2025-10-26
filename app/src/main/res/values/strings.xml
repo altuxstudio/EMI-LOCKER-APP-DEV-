@@ -2,4 +2,8 @@
     <string name="app_name">Emi Locker app</string>
     <string name="emi_lock_text">Emi Lock Service</string>
     <string name="emi_app_running">Emi Locker App Running in the Background</string>
+
+    <string name="accessibility_service_desc">
+    Detects when user opens Settings or taps Factory Reset
+</string>
 </resources>

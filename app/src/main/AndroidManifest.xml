@@ -10,8 +10,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:directBootAware="true"
         android:icon="@drawable/locker_home_ic"
         android:theme="@style/Theme.AppCompat.NoActionBar"
@@ -31,19 +35,24 @@
 
         <receiver
             android:name=".services.BootReceiver"
+            android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 
-        <service android:name=".services.LockService"
+        <service
+            android:name=".services.LockService"
+            android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync"/>
+            android:foregroundServiceType="dataSync" />
+
 
         <activity
             android:name=".uilayer.views.MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:label="@string/app_name"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
@@ -58,6 +67,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+
+        <!-- AndroidManifest.xml -->
+        <service
+            android:name=".services.SettingsWatchService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="false">
+
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/a11y_settings_watch" />
+        </service>
+
+
 
         <activity
             android:name=".uilayer.views.lockui.LockScreenActivity"

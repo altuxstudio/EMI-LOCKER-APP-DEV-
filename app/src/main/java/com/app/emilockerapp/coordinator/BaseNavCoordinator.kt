@@ -13,7 +13,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 
 open class BaseNavCoordinator(
-    private val mNavHostController: NavHostController,
+    val mNavHostController: NavHostController,
     private val mainModifier: Modifier,
     private val listOfChildNavGraphs: List<BaseChildNavGraph>,
     private val mStartDestination: String,

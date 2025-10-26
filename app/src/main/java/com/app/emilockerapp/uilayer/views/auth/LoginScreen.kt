@@ -17,7 +17,7 @@ class LoginScreen(navHostController: NavHostController) : BaseChildNavGraph {
     override fun createChildNavGraphBuilder(): NavGraphBuilder.() -> Unit {
         val output: NavGraphBuilder.() -> Unit = {
             composable(routeWithArgs(Routes.emi_Login_Screen)) {
-                EmiSettingsScreenUI()
+                LoginScreenUI()
             }
 
         }
@@ -25,7 +25,7 @@ class LoginScreen(navHostController: NavHostController) : BaseChildNavGraph {
     }
 
     @Composable
-    fun EmiSettingsScreenUI() {
+    fun LoginScreenUI() {
         LoginUiScreen()
     }
 }
@@ -33,7 +33,7 @@ class LoginScreen(navHostController: NavHostController) : BaseChildNavGraph {
 
 @Preview
 @Composable
-fun PreviewEmiSettingsScreenUI() {
+fun PreviewLoginScreenUI() {
     val mNavHostController = rememberNavController()
-    LoginScreen(mNavHostController).EmiSettingsScreenUI()
+    LoginScreen(mNavHostController).LoginScreenUI()
 }
