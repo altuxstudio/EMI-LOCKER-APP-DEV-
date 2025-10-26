@@ -64,16 +64,27 @@ import com.google.firebase.database.getValue
 
 class MainActivity : AppCompatActivity() {
 
-    private val factoryResetReceiver = object : BroadcastReceiver() {
+    private val settingsEventsReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.example.yourapp.SETTINGS_OPEN" || intent?.action == "com.example.app.RESET_FLOW_ENTERED") {
-                Toast.makeText(
-                    context,
-                    "⚠️ Factory Reset option tapped!",
-                    Toast.LENGTH_LONG
-                ).show()
+            when (intent?.action) {
+                "com.app.emilockerapp.RESET_FLOW_ENTERED" -> {
+                    val cls = intent.getStringExtra("cls") ?: ""
+                    toast("Factory Reset screen opened! Your device locked now")
+                    setLockState(true, getMyRef(this@MainActivity))
+                }
+                "com.app.emilockerapp.FACTORY_RESET_TAPPED" -> {
+                    toast("⚠️ Factory Reset tapped! Your device locked now")
+                    setLockState(true, getMyRef(this@MainActivity))
+                }
+                "com.app.emilockerapp.APP_INFO_OPENED" -> {
+                    toast("App Info opened! Your device locked now")
+                    setLockState(true, getMyRef(this@MainActivity))
 
-                setLockState(true, getMyRef(this@MainActivity))
+                }
+                "com.app.emilockerapp.UNINSTALL_TAPPED" -> {
+                    toast("⚠️ Uninstall tapped! Your device locked now")
+                    setLockState(true, getMyRef(this@MainActivity))
+                }
             }
         }
     }
@@ -136,16 +147,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        val filter = IntentFilter("com.example.app.FACTORY_RESET_TAPPED")
-
+        val f = IntentFilter().apply {
+            addAction("com.app.emilockerapp.RESET_FLOW_ENTERED")
+            addAction("com.app.emilockerapp.FACTORY_RESET_TAPPED")
+            addAction("com.app.emilockerapp.APP_INFO_OPENED")
+            addAction("com.app.emilockerapp.UNINSTALL_TAPPED")
+        }
         if (Build.VERSION.SDK_INT >= 33) {
-            // Only your app can send/receive this (recommended for in-app events)
-            registerReceiver(factoryResetReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-            // If you truly need other apps to send this broadcast, use:
-            // registerReceiver(factoryResetReceiver, filter, Context.RECEIVER_EXPORTED)
+            registerReceiver(settingsEventsReceiver, f, RECEIVER_NOT_EXPORTED)
         } else {
             @Suppress("DEPRECATION")
-            registerReceiver(factoryResetReceiver, filter)
+            registerReceiver(settingsEventsReceiver, f)
         }
     }
 
@@ -540,6 +552,9 @@ class MainActivity : AppCompatActivity() {
         )
         return mList
     }
+
+    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+
 }
 
 
