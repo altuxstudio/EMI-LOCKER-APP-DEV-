@@ -1,12 +1,14 @@
 package com.app.emilockerapp.uilayer.views.welcome
 
 
+import android.content.Intent
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,11 +19,14 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.startActivity
+import com.app.emilockerapp.uilayer.permission.ManagePermissionActivity
 import kotlin.math.sin
 
 @Composable
@@ -38,6 +43,8 @@ fun WelcomeScreen() {
         ),
         label = "offset"
     )
+
+    val context = LocalContext.current
 
     // Pulse animation for icon
     val pulseScale by infiniteTransition.animateFloat(
@@ -129,6 +136,18 @@ fun WelcomeScreen() {
             }
 
             Spacer(modifier = Modifier.height(48.dp))
+
+            Button(
+                onClick = {
+                    startActivity(context, Intent(context, ManagePermissionActivity::class.java), null)
+                },
+                shape = RoundedCornerShape(28.dp)
+            ) {
+                Icon(Icons.Default.Security, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Permission")
+            }
+
         }
     }
 }

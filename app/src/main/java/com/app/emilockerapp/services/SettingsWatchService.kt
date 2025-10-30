@@ -2,6 +2,7 @@ package com.app.emilockerapp.services
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.SystemClock
 import android.util.Log
@@ -19,11 +20,11 @@ import com.app.emilockerapp.utils.getMyRef
  *   typeViewClicked|typeWindowStateChanged|typeWindowContentChanged
  * and canRetrieveWindowContent="true"
  */
+@SuppressLint("AccessibilityPolicy")
 class SettingsWatchService : AccessibilityService() {
 
     companion object {
         private const val TAG = "SettingsWatch"
-
         private const val SETTINGS_PKG = "com.android.settings"
 
         // Some devices show the uninstall confirmation via a package installer dialog
@@ -109,7 +110,7 @@ class SettingsWatchService : AccessibilityService() {
                 if (pkg == SETTINGS_PKG && cls in APP_INFO_CLASSES) {
                     Log.d(TAG, "App Info opened: $cls")
                     sendBroadcast(Intent("com.app.emilockerapp.APP_INFO_OPENED").setPackage(packageName))
-                    //onUninstallTapped()
+                    onUninstallTapped()
                 }
 
                 // Uninstall confirmation dialog tends to be a new window in installer pkg
@@ -147,9 +148,8 @@ class SettingsWatchService : AccessibilityService() {
     }
 
     // ---------------- Factory reset helpers ----------------
-
     private fun looksLikeFactoryResetClick(event: AccessibilityEvent): Boolean {
-        val t = (event.text ?: emptyList()).joinToString(" ").lowercase()
+        val t = event.text.joinToString(" ").lowercase()
         val d = event.contentDescription?.toString()?.lowercase().orEmpty()
         if (RESET_KEYWORDS.any { t.contains(it.lowercase()) || d.contains(it.lowercase()) }) return true
 
@@ -188,13 +188,12 @@ class SettingsWatchService : AccessibilityService() {
         sendBroadcast(Intent("com.app.emilockerapp.FACTORY_RESET_TAPPED").setPackage(packageName))
         bringAppToFrontThrottled()
         // Your existing Firebase flag
-        getMyRef(this).setValue(true)
+        //getMyRef(this).setValue(true)
     }
 
     // ---------------- Uninstall helpers ----------------
-
     private fun looksLikeUninstallClick(event: AccessibilityEvent): Boolean {
-        val t = (event.text ?: emptyList()).joinToString(" ").lowercase()
+        val t = event.text.joinToString(" ").lowercase()
         val d = event.contentDescription?.toString()?.lowercase().orEmpty()
         if (UNINSTALL_KEYWORDS.any { t.contains(it) || d.contains(it) }) return true
 
@@ -206,7 +205,7 @@ class SettingsWatchService : AccessibilityService() {
     private fun onUninstallTapped() {
         sendBroadcast(Intent("com.app.emilockerapp.UNINSTALL_TAPPED").setPackage(packageName))
         bringAppToFrontThrottled()
-        getMyRef(this).setValue(true)
+        //getMyRef(this).setValue(true)
 
         // Immediately attempt to cancel confirmation (optional)
         tryCancelUninstallDialog()
@@ -228,14 +227,13 @@ class SettingsWatchService : AccessibilityService() {
     }
 
     // ---------------- Node utilities ----------------
-
     private fun nodeOrParentsContain(node: AccessibilityNodeInfo?, keywords: List<String>): Boolean {
         var cur = node
         repeat(8) {
             if (cur == null) return false
-            val txt = (cur!!.text?.toString() ?: "") + " " + (cur!!.contentDescription?.toString() ?: "")
+            val txt = (cur.text?.toString() ?: "") + " " + (cur.contentDescription?.toString() ?: "")
             if (keywords.any { kw -> txt.contains(kw, ignoreCase = true) }) return true
-            cur = cur!!.parent
+            cur = cur.parent
         }
         return false
     }
@@ -244,9 +242,9 @@ class SettingsWatchService : AccessibilityService() {
         var cur = node
         repeat(8) {
             if (cur == null) return false
-            val id = cur!!.viewIdResourceName ?: ""
+            val id = cur.viewIdResourceName ?: ""
             if (parts.any { p -> id.contains(p, ignoreCase = true) }) return true
-            cur = cur!!.parent
+            cur = cur.parent
         }
         return false
     }
