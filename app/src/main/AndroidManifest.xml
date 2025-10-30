@@ -17,7 +17,8 @@
     <application
         android:allowBackup="false"
         android:directBootAware="true"
-        android:icon="@drawable/locker_home_ic"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.AppCompat.NoActionBar"
         tools:targetApi="31">
 
