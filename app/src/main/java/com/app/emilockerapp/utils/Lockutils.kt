@@ -172,6 +172,11 @@ fun getMyRef(context: Context): DatabaseReference{
 
 }
 
+fun getMyRefUninstall(context: Context): DatabaseReference{
+    return Firebase.database.getReference("appLock").child(getDeviceImei(context)!!).child("uninstall")
+
+}
+
 fun setDeviceActive(context: Context, active: Boolean) =
     context.getSharedPreferences(PREF_NAME, MODE_PRIVATE).edit {
         putBoolean(

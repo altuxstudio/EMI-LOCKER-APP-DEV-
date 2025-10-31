@@ -1,30 +1,21 @@
 package com.app.emilockerapp.uilayer.views
 
-import android.Manifest
-import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
-import android.content.ComponentName
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.UserManager
-import android.provider.Settings
 import android.util.Log
-import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,7 +24,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavHostController
@@ -41,9 +31,7 @@ import com.app.emilockerapp.coordinator.BaseChildNavGraph
 import com.app.emilockerapp.coordinator.BaseNavCoordinator
 import com.app.emilockerapp.datalayer.viewmodels.MainViewmodel
 import com.app.emilockerapp.services.DeviceAdminManager
-import com.app.emilockerapp.services.DeviceAdminReceiver
 import com.app.emilockerapp.services.LockService
-import com.app.emilockerapp.services.SettingsWatchService
 import com.app.emilockerapp.ui.theme.EmiLockerAppTheme
 import com.app.emilockerapp.uilayer.views.dashboard.HomeScreen
 import com.app.emilockerapp.uilayer.views.emi.EmiScreen
@@ -53,60 +41,49 @@ import com.app.emilockerapp.uilayer.views.phoneRegisterScreen.PhoneRegisterScree
 import com.app.emilockerapp.uilayer.views.test.LockedScreen
 import com.app.emilockerapp.uilayer.views.welcome.WelcomeScreenNavGraph
 import com.app.emilockerapp.utils.getMyRef
+import com.app.emilockerapp.utils.getMyRefUninstall
 import com.app.emilockerapp.utils.isRegistered
 import com.app.emilockerapp.utils.startKioskMode
-import com.google.firebase.Firebase
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ValueEventListener
-import com.google.firebase.database.database
 import com.google.firebase.database.getValue
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var dpm: DevicePolicyManager
     private val settingsEventsReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 "com.app.emilockerapp.RESET_FLOW_ENTERED" -> {
                     val cls = intent.getStringExtra("cls") ?: ""
                     toast("Factory Reset screen opened! Your device locked now")
-                    setLockState(true, getMyRef(this@MainActivity))
+                    setLockState()
                 }
+
                 "com.app.emilockerapp.FACTORY_RESET_TAPPED" -> {
                     toast("⚠️ Factory Reset tapped! Your device locked now")
-                    setLockState(true, getMyRef(this@MainActivity))
+                    setLockState()
                 }
+
                 "com.app.emilockerapp.APP_INFO_OPENED" -> {
                     toast("App Info opened! Your device locked now")
-                    setLockState(true, getMyRef(this@MainActivity))
+                    setLockState()
 
                 }
+
                 "com.app.emilockerapp.UNINSTALL_TAPPED" -> {
                     toast("⚠️ Uninstall tapped! Your device locked now")
-                    setLockState(true, getMyRef(this@MainActivity))
+                    setLockState()
                 }
             }
         }
     }
 
-    private var devicePolicyManager: DevicePolicyManager? = null
-    private lateinit var adminComponent: ComponentName
-
     private lateinit var viewModel: MainViewmodel
-    private lateinit var mNavHostController: NavHostController
-
-    private val adminRequestLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            //Toast.makeText(this, "Device admin enabled", Toast.LENGTH_SHORT).show()
-            //setupKioskMode()
-        } else {
-            //Toast.makeText(this, "Device admin not enabled", Toast.LENGTH_SHORT).show()
-        }
-    }
-
+    private var isDeviceLocked = false
+    private var isDeviceUninstall = false
     private var _appCoordinator: EmiLockerNavCoordinator? = null
     private val appCoordinator get() = _appCoordinator!!
     private var bottomPadding = 0.dp
@@ -120,7 +97,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-//        startKioskMode(this)
         viewModel = ViewModelProvider(
             this,
             ViewModelProvider.AndroidViewModelFactory.getInstance(application)
@@ -129,12 +105,7 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
 
         DeviceAdminManager.init(applicationContext)
-
-
-        //setupDeviceAdmin()
-
-        //disableDeviceAdmin()
-        //checkAndRequestPermissions()
+        dpm = DeviceAdminManager.getDpm()
 
         startBackgroundService()
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -142,13 +113,6 @@ class MainActivity : AppCompatActivity() {
         setContent {
             MainView(false)
         }
-        //blockDeviceRestrictions()
-
-        // Check and request Accessibility permission
-        Handler().postDelayed({
-            //ensureAccessibilityEnabled()
-            //openAppDetails(this)
-        }, 5000)
 
     }
 
@@ -168,41 +132,36 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun setLockState(lock: Boolean, myRef1: DatabaseReference) {
-        myRef1.setValue(lock)
-            .addOnSuccessListener {
-                Toast.makeText(this, "Your Device is Locked", Toast.LENGTH_SHORT).show()
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(this, "Failed to update lock", Toast.LENGTH_SHORT).show()
-            }
-            .addOnCompleteListener {
-                checkDb(myRef1)
-            }
+    override fun onPause() {
+        super.onPause()
+        if (isDeviceLocked) {
+            dpm.lockNow()
+        } else {
+
+        }
+    }
+
+    override fun onBackPressed() {
+        if (isDeviceLocked) {
+            dpm.lockNow()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    fun setLockState() {
+        if (isDeviceUninstall){
+            dpm.lockNow()
+        }
     }
 
     private fun checkDb(myRef: DatabaseReference) {
-        myRef.addValueEventListener(object: ValueEventListener {
+        myRef.addValueEventListener(object : ValueEventListener {
 
             override fun onDataChange(snapshot: DataSnapshot) {
-                // This method is called once with the initial value and again
-                // whenever data at this location is updated.
                 val value = snapshot.getValue<Boolean>()
-                Log.d(TAG, "Value is: " + value)
 
-                if (value == true) {
-                    //setupKioskMode()
-                    //disableFileSharing(this@MainActivity)
-
-                    devicePolicyManager!!.lockNow()
-
-                    Toast.makeText(this@MainActivity, "yes", Toast.LENGTH_SHORT).show()
-
-                } else{
-                    unlockApp()
-                    //unblockDeviceRestrictions()
-                    //enableFileSharing(this@MainActivity)
-                }
+                isDeviceLocked = value ?: false
 
                 setContent {
                     MainView(value == true)
@@ -212,78 +171,25 @@ class MainActivity : AppCompatActivity() {
             override fun onCancelled(error: DatabaseError) {
                 Log.w(TAG, "Failed to read value.", error.toException())
             }
+        })
 
+        getMyRefUninstall(context = this).addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val value = snapshot.getValue<Boolean>()
+                isDeviceUninstall = value ?: false
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.w(TAG, "Failed to read value.", error.toException())
+            }
         })
     }
-
-    private fun ensureAccessibilityEnabled() {
-        if (!isA11yServiceEnabled(this, SettingsWatchService::class.java)) {
-            // Show instruction or open the settings page
-            openAccessibilitySettings(this)
-        } else {
-            // Already enabled — safe to continue normal flow
-            // e.g. start your overlay or background logic here
-        }
-    }
-
-    fun isA11yServiceEnabled(context: Context, service: Class<*>): Boolean {
-        val enabled = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-        val cn = ComponentName(context, service).flattenToString()
-        return enabled.split(':').any { it.equals(cn, ignoreCase = true) }
-    }
-
-    fun openAccessibilitySettings(context: Context) {
-        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
-    }
-
-    fun openAppDetails(context: Context) {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.parse("package:${context.packageName}")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    }
-
 
     override fun onResume() {
         super.onResume()
         startKioskMode(this@MainActivity)
 
         checkDb(getMyRef(this))
-    }
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private fun checkAndRequestPermissions() {
-        // Check if SMS permissions are granted
-
-        // Check if notification permission is granted
-        val notificationPermissionGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
-
-
-        // If permissions are not granted, request them
-        val permissionsToRequest = mutableListOf<String>()
-
-
-        if (!notificationPermissionGranted) {
-            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-
-
-        if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                permissionsToRequest.toTypedArray(),
-                POST_NOTIFICATION_PERMISSION_REQUEST_CODE // permission @nahid Use the same request code for all permissions
-            )
-        }
     }
 
     private fun startBackgroundService() {
@@ -301,137 +207,6 @@ class MainActivity : AppCompatActivity() {
             )
             val manager = getSystemService(NotificationManager::class.java)
             manager?.createNotificationChannel(channel)
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.P)
-    private fun setupDeviceAdmin() {
-        devicePolicyManager = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        adminComponent = ComponentName(this, DeviceAdminReceiver::class.java)
-
-        if (!devicePolicyManager!!.isAdminActive(adminComponent)) {
-            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
-                putExtra(
-                    DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                    "This app requires device admin permissions to function as a kiosk."
-                )
-            }
-            adminRequestLauncher.launch(intent)
-        } else {
-            //setupKioskMode()
-        }
-    }
-
-    private fun disableDeviceAdmin() {
-        devicePolicyManager!!.removeActiveAdmin(adminComponent)
-        Toast.makeText(this, "Device Admin Disabled", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun setupKioskMode() {
-        if (devicePolicyManager!!.isAdminActive(adminComponent)) {
-            window.decorView.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            or View.SYSTEM_UI_FLAG_FULLSCREEN
-                            or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    )
-
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            lockApp()
-            startLockTask()
-            if (devicePolicyManager!!.isLockTaskPermitted(packageName)) {
-
-
-            }
-        }
-    }
-
-    private fun lockApp() {
-        if(devicePolicyManager != null){
-            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
-                startLockTask()
-                Toast.makeText(this, "Device Locked", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun unlockApp() {
-        if (devicePolicyManager != null){
-            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
-                stopLockTask()
-            }
-        }
-    }
-
-    private fun blockDeviceRestrictions() {
-        if (devicePolicyManager != null){
-            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
-                try {
-                    devicePolicyManager!!.addUserRestriction(adminComponent, UserManager.DISALLOW_FACTORY_RESET)
-
-                    devicePolicyManager!!.addUserRestriction(adminComponent, UserManager.DISALLOW_SAFE_BOOT)
-                    devicePolicyManager!!.addUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
-
-
-                    //Toast.makeText(this, "Factory reset is now blocked", Toast.LENGTH_SHORT).show()
-                } catch (e: SecurityException) {
-                    Log.e(TAG, "Failed to block factory reset: ${e.message}")
-                    //Toast.makeText(this, "Blocking factory reset failed", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                //Toast.makeText(this, "Device admin not active", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    fun disableFileSharing(context: Context) {
-        if (devicePolicyManager != null){
-            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
-                val dpm = context.getSystemService(DevicePolicyManager::class.java)
-                dpm.addUserRestriction(adminComponent, UserManager.DISALLOW_SHARE_LOCATION)
-                dpm.addUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
-            }
-        }
-    }
-
-    fun enableFileSharing(context: Context) {
-        if (devicePolicyManager != null){
-            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
-                val dpm = context.getSystemService(DevicePolicyManager::class.java)
-                dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_SHARE_LOCATION)
-                dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
-            }
-        }
-    }
-
-    private fun unblockDeviceRestrictions() {
-        if (devicePolicyManager != null){
-            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
-                try {
-                    devicePolicyManager!!.clearUserRestriction(
-                        adminComponent,
-                        UserManager.DISALLOW_FACTORY_RESET
-                    )
-                    devicePolicyManager!!.clearUserRestriction(
-                        adminComponent,
-                        UserManager.DISALLOW_SAFE_BOOT
-                    )
-                    devicePolicyManager!!.clearUserRestriction(
-                        adminComponent,
-                        UserManager.DISALLOW_USB_FILE_TRANSFER
-                    )
-
-                    Toast.makeText(this, "Device restrictions removed", Toast.LENGTH_SHORT).show()
-                } catch (e: SecurityException) {
-                    Log.e(TAG, "Failed to unblock restrictions: ${e.message}")
-                    Toast.makeText(this, "Failed to remove restrictions", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(this, "Device admin not active", Toast.LENGTH_SHORT).show()
-            }
         }
     }
 
@@ -463,7 +238,7 @@ class MainActivity : AppCompatActivity() {
                 val mainModifier = Modifier.padding(innerPadding)
 
                 val mNavHostController = androidx.navigation.compose.rememberNavController()
-                if (!isRegistered(this)){
+                if (!isRegistered(this)) {
                     _appCoordinator = EmiLockerNavCoordinator(
                         mNavHostController,
                         mainModifier,
@@ -471,8 +246,8 @@ class MainActivity : AppCompatActivity() {
                         PhoneRegisterScreen.Routes.phoneRegister,
                         this
                     )
-                } else{
-                    if (isLockedScreen){
+                } else {
+                    if (isLockedScreen) {
                         _appCoordinator = EmiLockerNavCoordinator(
                             mNavHostController,
                             mainModifier,
@@ -481,7 +256,7 @@ class MainActivity : AppCompatActivity() {
                             LockedScreen.Routes.emi_Test_Screen,
                             this
                         )
-                    } else{
+                    } else {
                         _appCoordinator = EmiLockerNavCoordinator(
                             mNavHostController,
                             mainModifier,
@@ -496,62 +271,6 @@ class MainActivity : AppCompatActivity() {
                 appCoordinator.CatoPayNavHost()
             }
         }
-
-        /*EmiLockerAppTheme(darkTheme = false) {
-            Scaffold(
-                modifier = Modifier.fillMaxSize()
-            ) { innerPadding ->
-                bottomPadding = innerPadding.calculateBottomPadding()
-                val mainModifier = Modifier.padding(innerPadding)
-
-                val mNavHostController = androidx.navigation.compose.rememberNavController()
-
-                // Example Button to call blockDeviceRestrictions()
-                androidx.compose.foundation.layout.Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                ) {
-                    androidx.compose.material3.Button(
-                        onClick = {
-                            val isDeviceOwner = devicePolicyManager.isDeviceOwnerApp(packageName)
-                            if (!isDeviceOwner) {
-                                Toast.makeText(this@MainActivity, "Not device owner", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            } else {
-                                devicePolicyManager.clearDeviceOwnerApp(componentName.packageName)
-                                Toast.makeText(this@MainActivity, "Device owner clear", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-                            //blockDeviceRestrictions()
-                            Toast.makeText(this@MainActivity, "Clicked", Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        androidx.compose.material3.Text("Block Device Restrictions")
-                    }
-
-                    androidx.compose.material3.Button(
-                        onClick = {
-                            Toast.makeText(this@MainActivity, "Clearing permission", Toast.LENGTH_SHORT).show()
-                            //devicePolicyManager.clearDeviceOwnerApp(componentName.packageName)
-                            //devicePolicyManager.reboot(adminComponent)
-                            blockDeviceRestrictions()
-                        }
-                    ) {
-                        androidx.compose.material3.Text("Clear permission")
-                    }
-                }
-
-                _appCoordinator = EmiLockerNavCoordinator(
-                    mNavHostController,
-                    mainModifier,
-                    createListOfScreensInsideComposable(mNavHostController),
-                    SecurityScreen.Routes.emiSecurityScreen,
-                    this
-                )
-                appCoordinator.CatoPayNavHost()
-            }
-        }*/
     }
 
     private fun createListOfScreensInsideComposable(
@@ -566,15 +285,12 @@ class MainActivity : AppCompatActivity() {
             WelcomeScreenNavGraph(mNavHostController),
             LockedScreen(mNavHostController),
             PhoneRegisterScreen(mNavHostController)
-
         )
         return mList
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-
 }
-
 
 class EmiLockerNavCoordinator(
     mNavHostController: NavHostController,
@@ -585,7 +301,6 @@ class EmiLockerNavCoordinator(
 ) : BaseNavCoordinator(
     mNavHostController, mainModifier, listOfChildNavGraphs, mStartDestination, mActivity
 ) {
-
     @Composable
     fun CatoPayNavHost() {
         BaseNavHost()

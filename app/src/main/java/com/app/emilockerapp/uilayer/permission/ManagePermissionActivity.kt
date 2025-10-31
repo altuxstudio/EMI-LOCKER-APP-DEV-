@@ -122,6 +122,14 @@ fun ManagePermissionScreen(adminRequestLauncher: ActivityResultLauncher<Intent>)
         )
 
         PermissionRow(
+            "Overlay Permission",
+            hasOverlay,
+            subtitle = "Allow this app to display over other apps",
+            onClick = { openOverlaySettings(ctx, packageName, launcher) },
+            onAfter = { hasOverlay = canDrawOverlays(ctx) }
+        )
+
+        PermissionRow(
             "App Auto Start Permission",
             false,
             subtitle = "Opens OEM settings (manual)",
@@ -139,7 +147,7 @@ fun ManagePermissionScreen(adminRequestLauncher: ActivityResultLauncher<Intent>)
             "Battery Restriction Permission",
             ignoresDoze,
             subtitle = "Allow unrestricted battery usage",
-            onClick = { openBatterySettings(ctx, packageName, launcher) },
+            onClick = { requestIgnoreBatteryOptimizations(ctx, packageName, launcher) },
             onAfter = { ignoresDoze = isIgnoringBatteryOptimizations(ctx) }
         )
 
@@ -155,8 +163,14 @@ fun ManagePermissionScreen(adminRequestLauncher: ActivityResultLauncher<Intent>)
                     return@Button
                 }
 
-                if (DeviceAdminManager.hasPermission() && isAccessibilityEnabled(ctx)){
+                if (!canDrawOverlays(ctx)) {
+                    Toast.makeText(ctx, "Please enable overlay permission", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+
+                if (DeviceAdminManager.hasPermission() && isAccessibilityEnabled(ctx) && canDrawOverlays(ctx)){
                     Toast.makeText(ctx, "Device Already Active", Toast.LENGTH_SHORT).show()
+                    setDeviceActive(ctx, true)
                     return@Button
                 }
 
@@ -171,7 +185,9 @@ fun ManagePermissionScreen(adminRequestLauncher: ActivityResultLauncher<Intent>)
                 contentColor = Color.White
             )
         ) {
-            Text("Active Device", fontWeight = FontWeight.SemiBold)
+            Text(if (DeviceAdminManager.hasPermission() && isAccessibilityEnabled(ctx) && canDrawOverlays(ctx)) "Activated" else "Active Device",
+                color = if (DeviceAdminManager.hasPermission() && isAccessibilityEnabled(ctx) && canDrawOverlays(ctx)) Color.Green else Color.White,
+                fontWeight = FontWeight.SemiBold)
         }
 
     }
@@ -239,7 +255,8 @@ private fun openAccessibilitySettings(ctx: Context, launcher: androidx.activity.
 }
 
 private fun canDrawOverlays(ctx: Context) = Settings.canDrawOverlays(ctx)
-private fun openOverlaySettings(ctx: Context, pkg: String, launcher: androidx.activity.result.ActivityResultLauncher<Intent>) {
+
+private fun openOverlaySettings(ctx: Context, pkg: String, launcher: ActivityResultLauncher<Intent>) {
     launcher.launch(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$pkg")))
 }
 
@@ -248,8 +265,21 @@ private fun isIgnoringBatteryOptimizations(ctx: Context): Boolean {
     return pm.isIgnoringBatteryOptimizations(ctx.packageName)
 }
 
-private fun requestIgnoreBatteryOptimizations(ctx: Context, pkg: String, launcher: androidx.activity.result.ActivityResultLauncher<Intent>) {
-    launcher.launch(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).setData(Uri.parse("package:$pkg")))
+private fun requestIgnoreBatteryOptimizations(ctx: Context, pkg: String, launcher: ActivityResultLauncher<Intent>) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val pm = ctx.getSystemService(PowerManager::class.java)
+        if (!pm.isIgnoringBatteryOptimizations(pkg)) {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:$pkg")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            ctx.startActivity(intent)
+
+            launcher.launch(intent)
+        }
+
+    }
+    //launcher.launch(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).setData(Uri.parse("package:$pkg")))
 }
 
 private fun openBatterySettings(ctx: Context, pkg: String, launcher: androidx.activity.result.ActivityResultLauncher<Intent>) {
