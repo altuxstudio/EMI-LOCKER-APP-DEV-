@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.app.emilockerapp.uilayer.permission.ManagePermissionActivity
+import com.app.emilockerapp.utils.getDeviceActive
 import kotlin.math.sin
 
 @Composable
@@ -136,6 +137,12 @@ fun WelcomeScreen() {
             }
 
             Spacer(modifier = Modifier.height(48.dp))
+
+            Text(
+                text = if (getDeviceActive(context) == true) "Device is activated" else "Please activate the device",
+                fontSize = 16.sp,
+                color = if (getDeviceActive(context) == true) Color.White else Color.Red
+            )
 
             Button(
                 onClick = {

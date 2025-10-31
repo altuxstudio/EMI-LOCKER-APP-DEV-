@@ -104,4 +104,6 @@ dependencies {
     implementation(libs.android.material)
     implementation(libs.androidx.material.icons.extended)
 
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+
 }

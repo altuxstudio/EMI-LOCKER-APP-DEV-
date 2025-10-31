@@ -40,6 +40,7 @@ import androidx.navigation.NavHostController
 import com.app.emilockerapp.coordinator.BaseChildNavGraph
 import com.app.emilockerapp.coordinator.BaseNavCoordinator
 import com.app.emilockerapp.datalayer.viewmodels.MainViewmodel
+import com.app.emilockerapp.services.DeviceAdminManager
 import com.app.emilockerapp.services.DeviceAdminReceiver
 import com.app.emilockerapp.services.LockService
 import com.app.emilockerapp.services.SettingsWatchService
@@ -89,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private lateinit var devicePolicyManager: DevicePolicyManager
+    private var devicePolicyManager: DevicePolicyManager? = null
     private lateinit var adminComponent: ComponentName
 
     private lateinit var viewModel: MainViewmodel
@@ -126,21 +127,27 @@ class MainActivity : AppCompatActivity() {
         )[MainViewmodel::class.java]
 
         enableEdgeToEdge()
-        setupDeviceAdmin()
+
+        DeviceAdminManager.init(applicationContext)
+
+
+        //setupDeviceAdmin()
+
         //disableDeviceAdmin()
-        checkAndRequestPermissions()
+        //checkAndRequestPermissions()
+
         startBackgroundService()
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         setContent {
             MainView(false)
         }
-        blockDeviceRestrictions()
+        //blockDeviceRestrictions()
 
         // Check and request Accessibility permission
         Handler().postDelayed({
-            ensureAccessibilityEnabled()
-            openAppDetails(this)
+            //ensureAccessibilityEnabled()
+            //openAppDetails(this)
         }, 5000)
 
     }
@@ -187,7 +194,7 @@ class MainActivity : AppCompatActivity() {
                     //setupKioskMode()
                     //disableFileSharing(this@MainActivity)
 
-                    devicePolicyManager.lockNow()
+                    devicePolicyManager!!.lockNow()
 
                     Toast.makeText(this@MainActivity, "yes", Toast.LENGTH_SHORT).show()
 
@@ -299,10 +306,10 @@ class MainActivity : AppCompatActivity() {
 
     @RequiresApi(Build.VERSION_CODES.P)
     private fun setupDeviceAdmin() {
-        devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        devicePolicyManager = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
         adminComponent = ComponentName(this, DeviceAdminReceiver::class.java)
 
-        if (!devicePolicyManager.isAdminActive(adminComponent)) {
+        if (!devicePolicyManager!!.isAdminActive(adminComponent)) {
             val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
                 putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
                 putExtra(
@@ -317,12 +324,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun disableDeviceAdmin() {
-        devicePolicyManager.removeActiveAdmin(adminComponent)
+        devicePolicyManager!!.removeActiveAdmin(adminComponent)
         Toast.makeText(this, "Device Admin Disabled", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupKioskMode() {
-        if (devicePolicyManager.isAdminActive(adminComponent)) {
+        if (devicePolicyManager!!.isAdminActive(adminComponent)) {
             window.decorView.systemUiVisibility = (
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                             or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -335,7 +342,7 @@ class MainActivity : AppCompatActivity() {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             lockApp()
             startLockTask()
-            if (devicePolicyManager.isLockTaskPermitted(packageName)) {
+            if (devicePolicyManager!!.isLockTaskPermitted(packageName)) {
 
 
             }
@@ -343,77 +350,88 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun lockApp() {
-        if (devicePolicyManager.isAdminActive(adminComponent)) {
-            startLockTask()
-            Toast.makeText(this, "Device Locked", Toast.LENGTH_SHORT).show()
+        if(devicePolicyManager != null){
+            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
+                startLockTask()
+                Toast.makeText(this, "Device Locked", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     private fun unlockApp() {
-        if (devicePolicyManager.isAdminActive(adminComponent)) {
-            stopLockTask()
-            //Toast.makeText(this, "Device Unlocked", Toast.LENGTH_SHORT).show()
+        if (devicePolicyManager != null){
+            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
+                stopLockTask()
+            }
         }
     }
 
     private fun blockDeviceRestrictions() {
-        if (devicePolicyManager.isAdminActive(adminComponent)) {
-            try {
-                devicePolicyManager.addUserRestriction(adminComponent, UserManager.DISALLOW_FACTORY_RESET)
+        if (devicePolicyManager != null){
+            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
+                try {
+                    devicePolicyManager!!.addUserRestriction(adminComponent, UserManager.DISALLOW_FACTORY_RESET)
 
-                devicePolicyManager.addUserRestriction(adminComponent, UserManager.DISALLOW_SAFE_BOOT)
-                devicePolicyManager.addUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
+                    devicePolicyManager!!.addUserRestriction(adminComponent, UserManager.DISALLOW_SAFE_BOOT)
+                    devicePolicyManager!!.addUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
 
 
-                //Toast.makeText(this, "Factory reset is now blocked", Toast.LENGTH_SHORT).show()
-            } catch (e: SecurityException) {
-                Log.e(TAG, "Failed to block factory reset: ${e.message}")
-                //Toast.makeText(this, "Blocking factory reset failed", Toast.LENGTH_SHORT).show()
+                    //Toast.makeText(this, "Factory reset is now blocked", Toast.LENGTH_SHORT).show()
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "Failed to block factory reset: ${e.message}")
+                    //Toast.makeText(this, "Blocking factory reset failed", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                //Toast.makeText(this, "Device admin not active", Toast.LENGTH_SHORT).show()
             }
-        } else {
-            //Toast.makeText(this, "Device admin not active", Toast.LENGTH_SHORT).show()
         }
     }
 
     fun disableFileSharing(context: Context) {
-        if (devicePolicyManager.isAdminActive(adminComponent)) {
-            val dpm = context.getSystemService(DevicePolicyManager::class.java)
-            dpm.addUserRestriction(adminComponent, UserManager.DISALLOW_SHARE_LOCATION)
-            dpm.addUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
+        if (devicePolicyManager != null){
+            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
+                val dpm = context.getSystemService(DevicePolicyManager::class.java)
+                dpm.addUserRestriction(adminComponent, UserManager.DISALLOW_SHARE_LOCATION)
+                dpm.addUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
+            }
         }
     }
 
     fun enableFileSharing(context: Context) {
-        if (devicePolicyManager.isAdminActive(adminComponent)) {
-            val dpm = context.getSystemService(DevicePolicyManager::class.java)
-            dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_SHARE_LOCATION)
-            dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
+        if (devicePolicyManager != null){
+            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
+                val dpm = context.getSystemService(DevicePolicyManager::class.java)
+                dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_SHARE_LOCATION)
+                dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_USB_FILE_TRANSFER)
+            }
         }
     }
 
     private fun unblockDeviceRestrictions() {
-        if (devicePolicyManager.isAdminActive(adminComponent)) {
-            try {
-                devicePolicyManager.clearUserRestriction(
-                    adminComponent,
-                    UserManager.DISALLOW_FACTORY_RESET
-                )
-                devicePolicyManager.clearUserRestriction(
-                    adminComponent,
-                    UserManager.DISALLOW_SAFE_BOOT
-                )
-                devicePolicyManager.clearUserRestriction(
-                    adminComponent,
-                    UserManager.DISALLOW_USB_FILE_TRANSFER
-                )
+        if (devicePolicyManager != null){
+            if (devicePolicyManager!!.isAdminActive(adminComponent)) {
+                try {
+                    devicePolicyManager!!.clearUserRestriction(
+                        adminComponent,
+                        UserManager.DISALLOW_FACTORY_RESET
+                    )
+                    devicePolicyManager!!.clearUserRestriction(
+                        adminComponent,
+                        UserManager.DISALLOW_SAFE_BOOT
+                    )
+                    devicePolicyManager!!.clearUserRestriction(
+                        adminComponent,
+                        UserManager.DISALLOW_USB_FILE_TRANSFER
+                    )
 
-                Toast.makeText(this, "Device restrictions removed", Toast.LENGTH_SHORT).show()
-            } catch (e: SecurityException) {
-                Log.e(TAG, "Failed to unblock restrictions: ${e.message}")
-                Toast.makeText(this, "Failed to remove restrictions", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Device restrictions removed", Toast.LENGTH_SHORT).show()
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "Failed to unblock restrictions: ${e.message}")
+                    Toast.makeText(this, "Failed to remove restrictions", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Device admin not active", Toast.LENGTH_SHORT).show()
             }
-        } else {
-            Toast.makeText(this, "Device admin not active", Toast.LENGTH_SHORT).show()
         }
     }
 

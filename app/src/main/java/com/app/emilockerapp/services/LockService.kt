@@ -5,11 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.app.emilockerapp.R
 import com.app.emilockerapp.uilayer.views.MainActivity
-import com.app.emilockerapp.utils.getDeviceImei
 import com.app.emilockerapp.utils.getMyRef
 import com.google.firebase.database.*
 

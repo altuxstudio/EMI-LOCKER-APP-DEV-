@@ -10,9 +10,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,32 +31,68 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
+import com.app.emilockerapp.services.DeviceAdminManager
+import com.app.emilockerapp.utils.setDeviceActive
 
 /**
  * Activity wrapper so we can launch it from WelcomeScreen via Intent
  */
 class ManagePermissionActivity : ComponentActivity() {
+
+    private val adminRequestLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        // You can react to success/failure here if you want
+        // result.resultCode == Activity.RESULT_OK means enabled
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { ManagePermissionScreen() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        setContent { ManagePermissionScreen(adminRequestLauncher) }
+    }
+}
+
+@Composable
+private fun RememberRefreshOnResume(refresh: () -> Unit) {
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) refresh()
+        }
+        owner.lifecycle.addObserver(obs)
+        onDispose { owner.lifecycle.removeObserver(obs) }
     }
 }
 
 /* =====================================================
    MANAGE PERMISSION SCREEN — independent Composable
    ===================================================== */
+// 2) Update your ManagePermissionScreen to include the new button
 @Composable
-fun ManagePermissionScreen() {
+fun ManagePermissionScreen(adminRequestLauncher: ActivityResultLauncher<Intent>) {
     val ctx = LocalContext.current
     val packageName = ctx.packageName
-    val launcher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { }
 
-    var hasDeviceAdmin by remember { mutableStateOf(isDeviceAdminActive(ctx)) }
+    var hasDeviceAdmin by remember { mutableStateOf(DeviceAdminManager.hasPermission()) }
     var hasOverlay by remember { mutableStateOf(canDrawOverlays(ctx)) }
     var hasA11y by remember { mutableStateOf(isAccessibilityEnabled(ctx)) }
     var ignoresDoze by remember { mutableStateOf(isIgnoringBatteryOptimizations(ctx)) }
     var iconHidden by remember { mutableStateOf(!isLauncherAliasEnabled(ctx)) }
+
+    // refresh all flags whenever we come back to this screen
+    RememberRefreshOnResume {
+        hasDeviceAdmin = DeviceAdminManager.hasPermission()
+        hasOverlay = canDrawOverlays(ctx)
+        hasA11y = isAccessibilityEnabled(ctx)
+        ignoresDoze = isIgnoringBatteryOptimizations(ctx)
+    }
 
     Column(
         Modifier
@@ -65,38 +103,23 @@ fun ManagePermissionScreen() {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Manage Permissions", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text(
-            "Grant these permissions to keep Emilocker stable.",
-            color = Color.White.copy(alpha = 0.8f)
-        )
+        Text("Grant these permissions to keep Emilocker stable.", color = Color.White.copy(alpha = 0.8f))
 
-        /*PermissionRow(
+        PermissionRow(
             "Device Admin Permission",
             hasDeviceAdmin,
-            onClick = { requestDeviceAdmin(ctx, launcher) },
-            onAfter = { hasDeviceAdmin = isDeviceAdminActive(ctx) }
-        )*/
-
-        /*PermissionRow(
-            "Overlay Permission",
-            hasOverlay,
-            onClick = { openOverlaySettings(ctx, packageName, launcher) },
-            onAfter = { hasOverlay = canDrawOverlays(ctx) }
-        )*/
+            subtitle = "Required to lock or protect your device remotely.",
+            onClick = { DeviceAdminManager.requestEnable(ctx, adminRequestLauncher) },
+            onAfter = { hasDeviceAdmin = DeviceAdminManager.hasPermission() }
+        )
 
         PermissionRow(
             "Accessibility Permission",
             hasA11y,
+            subtitle = "Needed to detect system settings and prevent unauthorized actions.",
             onClick = { openAccessibilitySettings(ctx, launcher) },
             onAfter = { hasA11y = isAccessibilityEnabled(ctx) }
         )
-
-        /*PermissionRow(
-            "Battery Optimization Permission",
-            ignoresDoze,
-            onClick = { requestIgnoreBatteryOptimizations(ctx, packageName, launcher) },
-            onAfter = { ignoresDoze = isIgnoringBatteryOptimizations(ctx) }
-        )*/
 
         PermissionRow(
             "App Auto Start Permission",
@@ -120,27 +143,37 @@ fun ManagePermissionScreen() {
             onAfter = { ignoresDoze = isIgnoringBatteryOptimizations(ctx) }
         )
 
-        /*Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f))
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("App Icon Hide", color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Text("Toggle launcher icon visibility.", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+        Button(
+            onClick = {
+                if (!DeviceAdminManager.hasPermission()) {
+                    Toast.makeText(ctx, "Please enable device admin permission", Toast.LENGTH_SHORT).show()
+                    return@Button
                 }
-                Switch(
-                    checked = iconHidden,
-                    onCheckedChange = { shouldHide ->
-                        setLauncherAliasEnabled(ctx, enable = !shouldHide)
-                        iconHidden = shouldHide
-                    }
-                )
-            }
-        }*/
+
+                if (!isAccessibilityEnabled(ctx)) {
+                    Toast.makeText(ctx, "Please enable accessibility permission", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+
+                if (DeviceAdminManager.hasPermission() && isAccessibilityEnabled(ctx)){
+                    Toast.makeText(ctx, "Device Already Active", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+
+                Toast.makeText(ctx, "Device Activate Successfully", Toast.LENGTH_SHORT).show()
+                setDeviceActive(ctx, true)
+            },
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(vertical = 8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF2196F3), // blue background
+                contentColor = Color.White
+            )
+        ) {
+            Text("Active Device", fontWeight = FontWeight.SemiBold)
+        }
+
     }
 }
 
@@ -178,17 +211,6 @@ private fun PermissionRow(
             }
         }
     }
-}
-
-/* =====================================================
-   Permission Utility Functions
-   ===================================================== */
-private fun isDeviceAdminActive(ctx: Context): Boolean {
-    return try {
-        val dpm = ctx.getSystemService<DevicePolicyManager>() ?: return false
-        val cn = ComponentName(ctx, Class.forName("com.app.emilockerapp.services.MyDeviceAdminReceiver"))
-        dpm.isAdminActive(cn)
-    } catch (_: Exception) { false }
 }
 
 private fun requestDeviceAdmin(

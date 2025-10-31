@@ -171,7 +171,7 @@ fun PhoneRegisterUI(
 
                         OutlinedTextField(
                             value = imei,
-                            onValueChange = { imei = it.filter { ch -> ch.isDigit() }.take(16) },
+                            onValueChange = { imei = it.filter { ch -> ch.isDigit() }.take(15) },
                             label = { Text("IMEI (15 digits)", color = Color.White.copy(.7f)) },
                             leadingIcon = {
                                 Icon(

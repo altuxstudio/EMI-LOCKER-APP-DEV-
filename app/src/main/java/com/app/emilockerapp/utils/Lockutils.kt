@@ -19,6 +19,7 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.database
 import java.util.concurrent.TimeUnit
+import androidx.core.content.edit
 
 // SharedPreferences Constants
 private const val BASE_URL = "https://altux.asiradnan.com/api/"
@@ -31,6 +32,7 @@ private const val KEY_REG_TOKEN = "reg_token"
 private const val KEY_OWNER_NAME = "owner_name"
 private const val KEY_OWNER_EMAIL = "owner_email"
 private const val KEY_DEVICE_EMI = "device_emi"
+private const val KEY_DEVICE_ACTIVE = "KEY_DEVICE_ACTIVE"
 
 /**
  * Returns true if the EMI is currently overdue (i.e. locked state is active).
@@ -169,3 +171,14 @@ fun getMyRef(context: Context): DatabaseReference{
     return Firebase.database.getReference("appLock").child(getDeviceImei(context)!!).child("locked")
 
 }
+
+fun setDeviceActive(context: Context, active: Boolean) =
+    context.getSharedPreferences(PREF_NAME, MODE_PRIVATE).edit {
+        putBoolean(
+            KEY_DEVICE_ACTIVE,
+            active
+        )
+    }
+
+fun getDeviceActive(context: Context): Boolean? =
+    context.getSharedPreferences(PREF_NAME, MODE_PRIVATE).getBoolean(KEY_DEVICE_ACTIVE, false)
