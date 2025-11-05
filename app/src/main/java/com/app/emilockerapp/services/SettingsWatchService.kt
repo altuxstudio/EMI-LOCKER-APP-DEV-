@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.app.emilockerapp.uilayer.views.MainActivity
+import com.app.emilockerapp.utils.getDeviceActive
 import com.app.emilockerapp.utils.getMyRef
 
 /**
@@ -69,10 +70,12 @@ class SettingsWatchService : AccessibilityService() {
     // Prevents spamming re-launch
     private var lastBringToFrontAt = 0L
     private fun bringAppToFrontThrottled() {
-        val now = SystemClock.uptimeMillis()
-        if (now - lastBringToFrontAt < 1200) return
-        lastBringToFrontAt = now
-        bringAppToFront()
+        if (getDeviceActive(this) == true){
+            val now = SystemClock.uptimeMillis()
+            if (now - lastBringToFrontAt < 1200) return
+            lastBringToFrontAt = now
+            bringAppToFront()
+        }
     }
 
     override fun onServiceConnected() {
@@ -115,7 +118,7 @@ class SettingsWatchService : AccessibilityService() {
 
                 // Uninstall confirmation dialog tends to be a new window in installer pkg
                 if (pkg in INSTALLER_PACKAGES) {
-                    tryCancelUninstallDialog() // optional, kiosk-style behavior
+                    //tryCancelUninstallDialog() // optional, kiosk-style behavior
                 }
             }
 
@@ -208,7 +211,7 @@ class SettingsWatchService : AccessibilityService() {
         //getMyRef(this).setValue(true)
 
         // Immediately attempt to cancel confirmation (optional)
-        tryCancelUninstallDialog()
+        //tryCancelUninstallDialog()
     }
 
     /**

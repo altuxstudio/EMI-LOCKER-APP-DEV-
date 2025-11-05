@@ -3,7 +3,6 @@ package com.app.emilockerapp.uilayer.permission
 import android.content.pm.PackageManager
 import androidx.compose.ui.platform.LocalContext
 
-import android.app.admin.DevicePolicyManager
 import android.content.*
 import android.net.Uri
 import android.os.Build
@@ -68,10 +67,7 @@ private fun RememberRefreshOnResume(refresh: () -> Unit) {
     }
 }
 
-/* =====================================================
-   MANAGE PERMISSION SCREEN — independent Composable
-   ===================================================== */
-// 2) Update your ManagePermissionScreen to include the new button
+
 @Composable
 fun ManagePermissionScreen(adminRequestLauncher: ActivityResultLauncher<Intent>) {
     val ctx = LocalContext.current
@@ -117,7 +113,7 @@ fun ManagePermissionScreen(adminRequestLauncher: ActivityResultLauncher<Intent>)
             "Accessibility Permission",
             hasA11y,
             subtitle = "Needed to detect system settings and prevent unauthorized actions.",
-            onClick = { openAccessibilitySettings(ctx, launcher) },
+            onClick = { openAccessibilitySettings(launcher) },
             onAfter = { hasA11y = isAccessibilityEnabled(ctx) }
         )
 
@@ -186,16 +182,13 @@ fun ManagePermissionScreen(adminRequestLauncher: ActivityResultLauncher<Intent>)
             )
         ) {
             Text(if (DeviceAdminManager.hasPermission() && isAccessibilityEnabled(ctx) && canDrawOverlays(ctx)) "Activated" else "Active Device",
-                color = if (DeviceAdminManager.hasPermission() && isAccessibilityEnabled(ctx) && canDrawOverlays(ctx)) Color.Green else Color.White,
+                color = if (DeviceAdminManager.hasPermission() && isAccessibilityEnabled(ctx) && canDrawOverlays(ctx)) Color.Red else Color.White,
                 fontWeight = FontWeight.SemiBold)
         }
 
     }
 }
 
-/* =====================================================
-   Reusable Permission Row Component
-   ===================================================== */
 @Composable
 private fun PermissionRow(
     title: String,
@@ -229,28 +222,13 @@ private fun PermissionRow(
     }
 }
 
-private fun requestDeviceAdmin(
-    ctx: Context,
-    launcher: androidx.activity.result.ActivityResultLauncher<Intent>
-) {
-    try {
-        val cn = ComponentName(ctx, Class.forName("com.app.emilockerapp.services.MyDeviceAdminReceiver"))
-        val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-            .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, cn)
-            .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Grant admin to enable lock control.")
-        launcher.launch(intent)
-    } catch (_: Exception) {
-        launcher.launch(Intent(Settings.ACTION_SECURITY_SETTINGS))
-    }
-}
-
 private fun isAccessibilityEnabled(ctx: Context): Boolean {
     val enabled = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
     val target = ComponentName(ctx, Class.forName("com.app.emilockerapp.services.SettingsWatchService")).flattenToString()
     return enabled.split(':').any { it.equals(target, ignoreCase = true) }
 }
 
-private fun openAccessibilitySettings(ctx: Context, launcher: androidx.activity.result.ActivityResultLauncher<Intent>) {
+private fun openAccessibilitySettings(launcher: ActivityResultLauncher<Intent>) {
     launcher.launch(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
 }
 

@@ -40,6 +40,7 @@ import com.app.emilockerapp.uilayer.views.auth.LoginScreen
 import com.app.emilockerapp.uilayer.views.phoneRegisterScreen.PhoneRegisterScreen
 import com.app.emilockerapp.uilayer.views.test.LockedScreen
 import com.app.emilockerapp.uilayer.views.welcome.WelcomeScreenNavGraph
+import com.app.emilockerapp.utils.getDeviceActive
 import com.app.emilockerapp.utils.getMyRef
 import com.app.emilockerapp.utils.getMyRefUninstall
 import com.app.emilockerapp.utils.isRegistered
@@ -55,27 +56,29 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dpm: DevicePolicyManager
     private val settingsEventsReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                "com.app.emilockerapp.RESET_FLOW_ENTERED" -> {
-                    val cls = intent.getStringExtra("cls") ?: ""
-                    toast("Factory Reset screen opened! Your device locked now")
-                    setLockState()
-                }
+            if (getDeviceActive(this@MainActivity) == true){
+                when (intent?.action) {
+                    "com.app.emilockerapp.RESET_FLOW_ENTERED" -> {
+                        val cls = intent.getStringExtra("cls") ?: ""
+                        toast("Factory Reset screen opened! Your device locked now")
+                        setLockState()
+                    }
 
-                "com.app.emilockerapp.FACTORY_RESET_TAPPED" -> {
-                    toast("⚠️ Factory Reset tapped! Your device locked now")
-                    setLockState()
-                }
+                    "com.app.emilockerapp.FACTORY_RESET_TAPPED" -> {
+                        toast("⚠️ Factory Reset tapped! Your device locked now")
+                        setLockState()
+                    }
 
-                "com.app.emilockerapp.APP_INFO_OPENED" -> {
-                    toast("App Info opened! Your device locked now")
-                    setLockState()
+                    "com.app.emilockerapp.APP_INFO_OPENED" -> {
+                        toast("App Info opened! Your device locked now")
+                        setLockState()
 
-                }
+                    }
 
-                "com.app.emilockerapp.UNINSTALL_TAPPED" -> {
-                    toast("⚠️ Uninstall tapped! Your device locked now")
-                    setLockState()
+                    "com.app.emilockerapp.UNINSTALL_TAPPED" -> {
+                        toast("⚠️ Uninstall tapped! Your device locked now")
+                        setLockState()
+                    }
                 }
             }
         }
@@ -150,7 +153,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun setLockState() {
-        if (isDeviceUninstall){
+        if (!isDeviceUninstall){
             dpm.lockNow()
         }
     }
