@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "422571795651",
+    "firebase_url": "https://emi-locker-d1701-default-rtdb.firebaseio.com",
+    "project_id": "emi-locker-d1701",
+    "storage_bucket": "emi-locker-d1701.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:422571795651:android:778d6b35784dbe2679ae76",
+        "android_client_info": {
+          "package_name": "com.app.emilockerapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuxJLqIcQ36snORuldgDU-sOE-i2iCiL0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:422571795651:android:1aee8e57871b2c4079ae76",
+        "android_client_info": {
+          "package_name": "com.cleon.uioverlay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuxJLqIcQ36snORuldgDU-sOE-i2iCiL0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
